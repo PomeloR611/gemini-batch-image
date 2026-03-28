@@ -1,7 +1,10 @@
 import { useState } from 'react'
 import { useApp } from '../../context/AppContext'
+import { saveDraftImage, deleteDraftImage } from '../../services/db'
 
-export default function ReferenceMode({ imageBase64, setImageBase64, description, setDescription }) {
+const REFERENCE_IMAGE_KEY = 'reference_image'
+
+export default function ReferenceMode({ imageBase64, setImageBase64, imageId, setImageId, description, setDescription }) {
   const { t } = useApp()
   const [uploading, setUploading] = useState(false)
 
@@ -17,14 +20,33 @@ export default function ReferenceMode({ imageBase64, setImageBase64, description
     setUploading(true)
     try {
       const reader = new FileReader()
-      reader.onload = (ev) => {
+      reader.onload = async (ev) => {
         const base64 = ev.target.result.split(',')[1]
+        const mimeType = file.type || 'image/jpeg'
+        
+        // 保存到 IndexedDB
+        const id = REFERENCE_IMAGE_KEY
+        await saveDraftImage(id, base64, mimeType)
+        
         setImageBase64(base64)
+        setImageId(id)
       }
       reader.readAsDataURL(file)
     } finally {
       setUploading(false)
     }
+  }
+
+  const handleRemove = async () => {
+    if (imageId) {
+      try {
+        await deleteDraftImage(imageId)
+      } catch (e) {
+        console.error('Failed to delete from IndexedDB:', e)
+      }
+    }
+    setImageBase64(null)
+    setImageId(null)
   }
 
   return (
@@ -38,7 +60,7 @@ export default function ReferenceMode({ imageBase64, setImageBase64, description
               className="max-h-48 mx-auto rounded-lg"
             />
             <button
-              onClick={() => setImageBase64(null)}
+              onClick={handleRemove}
               className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center"
             >
               ×

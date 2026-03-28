@@ -12,8 +12,10 @@ import { translateWithMinimax } from '../../services/minimax'
 import { generateImageWithGemini } from '../../services/gemini'
 import { saveImageToFolder, addToHistory } from '../../services/storage'
 import { generateId, sleep } from '../../utils/helpers'
+import { getDraftImage } from '../../services/db'
 
 const DRAFT_KEY = 'gemini_batch_draft'
+const REFERENCE_IMAGE_KEY = 'reference_image'
 
 export default function BatchGenerate() {
   const {
@@ -29,6 +31,7 @@ export default function BatchGenerate() {
       mode: 'keyword',
       keywordInput: '',
       referenceImage: null,
+      referenceImageId: null,
       referenceDesc: '',
       directInput: '',
       imageCount: 1,
@@ -50,7 +53,34 @@ export default function BatchGenerate() {
   })
 
   // 解构草稿
-  const { mode, setMode, keywordInput, setKeywordInput, referenceImage, setReferenceImage, referenceDesc, setReferenceDesc, directInput, setDirectInput, imageCount, setImageCount, translatedPrompts, setTranslatedPrompts, step, setStep } = draft
+  const { 
+    mode, setMode, 
+    keywordInput, setKeywordInput, 
+    referenceImage, setReferenceImage, 
+    referenceImageId, setReferenceImageId,
+    referenceDesc, setReferenceDesc, 
+    directInput, setDirectInput, 
+    imageCount, setImageCount, 
+    translatedPrompts, setTranslatedPrompts, 
+    step, setStep 
+  } = draft
+
+  // 页面加载时从 IndexedDB 恢复参考图
+  useEffect(() => {
+    const restoreImage = async () => {
+      if (referenceImageId && !referenceImage) {
+        try {
+          const stored = await getDraftImage(referenceImageId)
+          if (stored) {
+            setReferenceImage(stored.base64)
+          }
+        } catch (e) {
+          console.error('Failed to restore image from IndexedDB:', e)
+        }
+      }
+    }
+    restoreImage()
+  }, [])
 
   // 保存草稿到 LocalStorage
   useEffect(() => {
@@ -346,6 +376,8 @@ export default function BatchGenerate() {
           <ReferenceMode
             imageBase64={referenceImage}
             setImageBase64={(v) => updateDraft({ referenceImage: v })}
+            imageId={referenceImageId}
+            setImageId={(v) => updateDraft({ referenceImageId: v })}
             description={referenceDesc}
             setDescription={(v) => updateDraft({ referenceDesc: v })}
           />
