@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useApp } from '../../context/AppContext'
 import ModeSelector from './ModeSelector'
 import KeywordMode from './KeywordMode'
@@ -15,7 +15,6 @@ import { generateId, sleep } from '../../utils/helpers'
 import { getDraftImage } from '../../services/db'
 
 const DRAFT_KEY = 'gemini_batch_draft'
-const REFERENCE_IMAGE_KEY = 'reference_image'
 
 export default function BatchGenerate() {
   const {
@@ -53,31 +52,34 @@ export default function BatchGenerate() {
   })
 
   // 解构草稿
-  const { 
-    mode, setMode, 
-    keywordInput, setKeywordInput, 
-    referenceImage, setReferenceImage, 
-    referenceImageId, setReferenceImageId,
-    referenceDesc, setReferenceDesc, 
-    directInput, setDirectInput, 
-    imageCount, setImageCount, 
-    translatedPrompts, setTranslatedPrompts, 
+  const {
+    mode,
+    keywordInput,
+    referenceImage,
+    referenceImageId,
+    referenceDesc,
+    directInput,
+    imageCount,
+    translatedPrompts,
     step
   } = draft
 
-  // 创建 step 的 setter
-  const setStep = (newStep) => {
-    updateDraft({ step: typeof newStep === 'function' ? newStep(draft.step) : newStep })
-  }
+  // 创建 draft 的更新函数
+  const updateDraft = useCallback((updates) => {
+    setDraft(prev => {
+      const newDraft = typeof updates === 'function' ? updates(prev) : { ...prev, ...updates }
+      return newDraft
+    })
+  }, [])
 
   // 页面加载时从 IndexedDB 恢复参考图
   useEffect(() => {
     const restoreImage = async () => {
-      if (referenceImageId && !referenceImage) {
+      if (draft.referenceImageId && !draft.referenceImage) {
         try {
-          const stored = await getDraftImage(referenceImageId)
+          const stored = await getDraftImage(draft.referenceImageId)
           if (stored) {
-            setReferenceImage(stored.base64)
+            updateDraft({ referenceImage: stored.base64 })
           }
         } catch (e) {
           console.error('Failed to restore image from IndexedDB:', e)
@@ -105,32 +107,28 @@ export default function BatchGenerate() {
   const parsePrompts = () => {
     const input = getInput()
     if (!input.trim()) return []
-    
+
     if (mode === 'direct') {
       return input.split('\n').map(l => l.trim()).filter(Boolean)
     }
-    
+
     return input.split(/[,\n]/).map(l => l.trim()).filter(Boolean)
   }
 
   // 步骤1: 点击翻译
   const handleTranslate = async () => {
-    console.log('handleTranslate called, minimaxKey:', minimaxKey ? 'set' : 'empty')
-    
     if (!minimaxKey) {
       alert(t('errors.noMinimaxKey'))
       return
     }
 
     const prompts = parsePrompts()
-    console.log('prompts:', prompts)
     if (prompts.length === 0) {
       alert('请输入内容')
       return
     }
 
-    setStep('translating')
-    setTranslatedPrompts([])
+    updateDraft({ step: 'translating', translatedPrompts: [] })
     setProgress({ current: 0, total: prompts.length, status: 'translating' })
     setUsageStats({ minimaxCalls: 0, minimaxTokens: 0, geminiCalls: 0 })
     setLogs([])
@@ -143,7 +141,7 @@ export default function BatchGenerate() {
     for (let i = 0; i < prompts.length; i++) {
       const promptInput = prompts[i]
       addLog(`翻译中: ${promptInput.slice(0, 30)}${promptInput.length > 30 ? '...' : ''}`, 'translating')
-      
+
       if (mode === 'direct') {
         translated.push({ original: promptInput, translated: promptInput, editing: promptInput })
         addLog(`跳过翻译（直接粘贴模式）`, 'info')
@@ -167,7 +165,7 @@ export default function BatchGenerate() {
         addLog(`翻译失败: ${e.message}`, 'error')
         translated.push({ original: promptInput, translated: `翻译失败: ${e.message}`, editing: `翻译失败: ${e.message}` })
       }
-      
+
       setProgress(p => ({ ...p, current: i + 1 }))
     }
 
@@ -176,8 +174,7 @@ export default function BatchGenerate() {
       minimaxCalls: callCount,
       minimaxTokens: totalTokens
     }))
-    setTranslatedPrompts(translated)
-    setStep('review')
+    updateDraft({ translatedPrompts: translated, step: 'review' })
     addLog(`翻译完成，共 ${callCount} 条成功`, 'success')
   }
 
@@ -188,7 +185,7 @@ export default function BatchGenerate() {
       return
     }
 
-    setStep('generating')
+    updateDraft({ step: 'generating' })
     setResults([])
     setProgress({ current: 0, total: translatedPrompts.length * imageCount, status: 'generating' })
     setLogs([])
@@ -241,9 +238,7 @@ export default function BatchGenerate() {
           addLog(`保存图片: ${filename}`, 'translating')
 
           try {
-            if (dirHandle) {
-              await saveImageToFolder(dirHandle, filename, imageData.base64, imageData.mimeType)
-            }
+            await saveImageToFolder(dirHandle, filename, imageData.base64, imageData.mimeType)
             allResults.push({
               id: `${taskId}_${i}_${j}`,
               status: 'success',
@@ -281,7 +276,7 @@ export default function BatchGenerate() {
 
     setResults(allResults)
     setProgress(p => ({ ...p, status: 'completed', current: allResults.length }))
-    setStep('done')
+    updateDraft({ step: 'done' })
 
     const successCount = allResults.filter(r => r.status === 'success').length
     const failedCount = allResults.filter(r => r.status === 'failed').length
@@ -327,9 +322,7 @@ export default function BatchGenerate() {
       const imageData = await generateImageWithGemini(geminiKey, resultItem.translatedPrompt)
       const filename = `gemini_${Date.now()}_${String(index + 1).padStart(3, '0')}.png`
 
-      if (dirHandle) {
-        await saveImageToFolder(dirHandle, filename, imageData.base64, imageData.mimeType)
-      }
+      await saveImageToFolder(dirHandle, filename, imageData.base64, imageData.mimeType)
 
       newResults[index] = {
         ...resultItem,
@@ -339,7 +332,7 @@ export default function BatchGenerate() {
         filename
       }
       addLog(`✓ 重试成功: ${filename}`, 'success')
-      
+
       setUsageStats(prev => ({
         ...prev,
         geminiCalls: prev.geminiCalls + 1
@@ -357,8 +350,7 @@ export default function BatchGenerate() {
   }
 
   const handleBackToInput = () => {
-    setStep('input')
-    setTranslatedPrompts([])
+    updateDraft({ step: 'input', translatedPrompts: [] })
     setResults([])
     setProgress({ current: 0, total: 0, status: 'idle' })
     setLogs([])
@@ -367,11 +359,7 @@ export default function BatchGenerate() {
   const updatePromptEditing = (index, newValue) => {
     const updated = [...translatedPrompts]
     updated[index].editing = newValue
-    setTranslatedPrompts(updated)
-  }
-
-  const updateDraft = (updates) => {
-    setDraft(prev => ({ ...prev, ...updates }))
+    updateDraft({ translatedPrompts: updated })
   }
 
   const renderModeInput = () => {
@@ -408,7 +396,7 @@ export default function BatchGenerate() {
           返回修改输入
         </button>
       </div>
-      
+
       {translatedPrompts.map((item, index) => (
         <div key={index} className="border rounded-lg p-4">
           <div className="text-sm text-gray-500 mb-2">
@@ -432,7 +420,7 @@ export default function BatchGenerate() {
           <label className="text-sm text-gray-600">{t('generate.countLabel')}</label>
           <select
             value={imageCount}
-            onChange={(e) => setImageCount(Number(e.target.value))}
+            onChange={(e) => updateDraft({ imageCount: Number(e.target.value) })}
             className="px-3 py-2 border rounded-lg"
           >
             {[1, 2, 3, 4].map(n => (
@@ -477,7 +465,7 @@ export default function BatchGenerate() {
               <label className="text-sm text-gray-600">{t('generate.countLabel')}</label>
               <select
                 value={imageCount}
-                onChange={(e) => setImageCount(Number(e.target.value))}
+                onChange={(e) => updateDraft({ imageCount: Number(e.target.value) })}
                 className="px-3 py-2 border rounded-lg"
               >
                 {[1, 2, 3, 4].map(n => (
@@ -538,7 +526,7 @@ export default function BatchGenerate() {
             <div className="lg:col-span-1">
               <GenerationLog logs={logs} />
             </div>
-            
+
             {/* 右侧：进度 + 图片网格 */}
             <div className="lg:col-span-2">
               {progress.status !== 'idle' && (
