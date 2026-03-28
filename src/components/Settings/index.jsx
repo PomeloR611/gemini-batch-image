@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useApp } from '../../context/AppContext'
+import StorageInfo from '../StorageInfo'
 
 export default function Settings() {
   const {
@@ -117,6 +118,11 @@ export default function Settings() {
             English
           </button>
         </div>
+      </section>
+
+      <section className="mb-8">
+        <h3 className="text-lg font-medium mb-4">本地存储</h3>
+        <StorageInfo />
       </section>
 
       {saved && (
