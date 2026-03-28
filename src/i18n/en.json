@@ -1,0 +1,61 @@
+{
+  "app": {
+    "title": "Gemini Batch Image",
+    "tabs": {
+      "generate": "Batch Generate",
+      "history": "History",
+      "settings": "Settings"
+    }
+  },
+  "generate": {
+    "modes": {
+      "keyword": "Keyword Mode",
+      "reference": "Reference Image",
+      "direct": "Direct Prompt"
+    },
+    "keywordPlaceholder": "Enter keywords separated by commas or newlines, e.g.: cyberpunk city, cute kitten",
+    "referencePlaceholder": "Upload a reference image, then describe the effect you want",
+    "directPlaceholder": "One prompt per line, paste directly",
+    "startButton": "Start Generating",
+    "countLabel": "Images per prompt",
+    "uploading": "Uploading...",
+    "uploadHint": "Supports JPG/PNG/WebP, single file < 10MB"
+  },
+  "progress": {
+    "idle": "Idle",
+    "translating": "Translating...",
+    "generating": "Generating...",
+    "saving": "Saving...",
+    "completed": "Completed",
+    "failed": "Failed"
+  },
+  "history": {
+    "empty": "No history yet",
+    "mode": "Mode",
+    "input": "Input",
+    "results": "Results",
+    "successCount": "Success",
+    "failedCount": "Failed",
+    "clearAll": "Clear All",
+    "retry": "Retry"
+  },
+  "settings": {
+    "title": "Settings",
+    "apiKeys": "API Key Configuration",
+    "minimaxKey": "MiniMax Key (for translation)",
+    "geminiKey": "Gemini Key (for image generation)",
+    "savePath": "Save Path",
+    "selectFolder": "Select Folder",
+    "changeFolder": "Change Folder",
+    "language": "Interface Language",
+    "saved": "Settings saved"
+  },
+  "errors": {
+    "noMinimaxKey": "Please enter MiniMax Key in Settings",
+    "noGeminiKey": "Please enter Gemini Key in Settings",
+    "noSavePath": "Please select a save path in Settings",
+    "invalidKey": "Invalid API Key",
+    "networkError": "Network error, please check your connection",
+    "rateLimit": "Too many requests, please try again later"
+  }
+}

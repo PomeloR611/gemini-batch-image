@@ -1,0 +1,61 @@
+{
+  "app": {
+    "title": "Gemini 批量生图",
+    "tabs": {
+      "generate": "批量生图",
+      "history": "历史记录",
+      "settings": "设置"
+    }
+  },
+  "generate": {
+    "modes": {
+      "keyword": "主题词生成",
+      "reference": "参考图生成",
+      "direct": "直接粘贴"
+    },
+    "keywordPlaceholder": "输入主题词，用逗号或换行分隔，如：赛博朋克城市, 治愈系猫咪",
+    "referencePlaceholder": "上传参考图后，输入你想要的效果描述",
+    "directPlaceholder": "每行一个 Prompt，直接粘贴",
+    "startButton": "开始生成",
+    "countLabel": "每条生成数量",
+    "uploading": "上传中...",
+    "uploadHint": "支持 JPG/PNG/WebP，单文件 < 10MB"
+  },
+  "progress": {
+    "idle": "待机中",
+    "translating": "翻译中...",
+    "generating": "生成中...",
+    "saving": "保存中...",
+    "completed": "完成",
+    "failed": "失败"
+  },
+  "history": {
+    "empty": "暂无历史记录",
+    "mode": "模式",
+    "input": "输入",
+    "results": "结果",
+    "successCount": "成功",
+    "failedCount": "失败",
+    "clearAll": "清空全部",
+    "retry": "重试"
+  },
+  "settings": {
+    "title": "设置",
+    "apiKeys": "API Key 配置",
+    "minimaxKey": "MiniMax Key（翻译用）",
+    "geminiKey": "Gemini Key（生图用）",
+    "savePath": "保存路径",
+    "selectFolder": "选择文件夹",
+    "changeFolder": "更换文件夹",
+    "language": "界面语言",
+    "saved": "设置已保存"
+  },
+  "errors": {
+    "noMinimaxKey": "请先在设置中填写 MiniMax Key",
+    "noGeminiKey": "请先在设置中填写 Gemini Key",
+    "noSavePath": "请先在设置中选择保存路径",
+    "invalidKey": "API Key 无效",
+    "networkError": "网络错误，请检查网络连接",
+    "rateLimit": "请求过于频繁，请稍后重试"
+  }
+}
