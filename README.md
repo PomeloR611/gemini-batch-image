@@ -27,12 +27,17 @@
 - [x] LLM 调用统计（次数 / Token / 预估费用）
 - [x] 历史记录（LocalStorage）
 - [x] 失败任务重试
+- [x] 实时生成日志面板
+- [x] 草稿持久化（刷新页面不丢失）
+- [x] 参考图 IndexedDB 存储
+- [x] 本地存储空间显示 + 一键清理
+- [x] 多币种价格换算（人民币/新币/美元）
 
 ## 技术栈
 
 - React 18 + Vite
 - Tailwind CSS
-- LocalStorage
+- LocalStorage + IndexedDB
 - File System Access API
 
 ## 目录结构
@@ -47,11 +52,15 @@ gemini-batch-image/
 │   │   ├── Header.jsx
 │   │   ├── ImagePreview.jsx
 │   │   ├── ProgressBar.jsx
-│   │   └── UsageStats.jsx  # LLM 统计面板
+│   │   ├── UsageStats.jsx  # LLM 统计面板
+│   │   ├── GenerationLog.jsx # 生成日志
+│   │   └── StorageInfo.jsx  # 存储信息
 │   ├── services/
 │   │   ├── minimax.js      # MiniMax 翻译
 │   │   ├── gemini.js       # Gemini 生图
-│   │   └── storage.js      # 文件保存
+│   │   ├── storage.js      # 文件保存
+│   │   ├── db.js          # IndexedDB
+│   │   └── exchangeRate.js # 汇率服务
 │   ├── i18n/               # 中英双语
 │   ├── context/             # 全局状态
 │   └── utils/               # 工具函数
@@ -60,6 +69,16 @@ gemini-batch-image/
 ```
 
 ## 版本历史
+
+### v1.1.0 (2026-03-28)
+
+**功能增强**
+- 实时生成日志面板（左侧滚动日志）
+- 草稿持久化（刷新页面不丢失输入内容）
+- 参考图 IndexedDB 存储
+- 本地存储空间显示 + 一键清理
+- 多币种价格换算（人民币/新币/美元）
+- 汇率实时获取（Frankfurter API）
 
 ### v1.0.0 (2026-03-28)
 
@@ -90,7 +109,11 @@ npm install
 
 使用 Chrome/Edge 浏览器选择本地文件夹，图片将直接保存到该目录。
 
-### 4. 开始使用
+### 4. 选择货币类型
+
+在设置页面选择费用显示的货币类型（人民币/新币/美元），系统会根据实时汇率自动换算。
+
+### 5. 开始使用
 
 ```bash
 npm run dev
@@ -98,10 +121,22 @@ npm run dev
 
 ## 价格估算
 
-| 服务 | 单价 |
+### MiniMax 翻译
+
+| 项目 | 单价 |
 |------|------|
-| MiniMax | ¥0.1/千 Token |
-| Gemini | ¥0.01/千 Token（折算）|
+| Token | ¥0.1/千 Token |
+
+### Gemini 生图（官方 USD 定价）
+
+| 图片分辨率 | 每张图片消耗 Token | 单价（USD） |
+|-----------|------------------|--------------|
+| 0.5K (512x512) | 747 | $0.045 |
+| 1K (1024x1024) | 1,120 | $0.067 |
+| 2K (2048x2048) | 1,680 | $0.101 |
+| 4K (4096x4096) | 2,520 | $0.151 |
+
+> 注：实际费用会根据你选择的货币类型和实时汇率自动换算显示。
 
 ## License
 
