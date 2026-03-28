@@ -8,6 +8,7 @@ export function AppProvider({ children }) {
   const [minimaxKey, setMinimaxKey] = useState(() => localStorage.getItem('minimaxKey') || '')
   const [geminiKey, setGeminiKey] = useState(() => localStorage.getItem('geminiKey') || '')
   const [savePath, setSavePath] = useState(() => localStorage.getItem('savePath') || null)
+  const [currency, setCurrency] = useState(() => localStorage.getItem('currency') || 'CNY')
   const [history, setHistory] = useState(() => {
     const saved = localStorage.getItem('history')
     return saved ? JSON.parse(saved) : []
@@ -31,6 +32,10 @@ export function AppProvider({ children }) {
   }, [savePath])
 
   useEffect(() => {
+    localStorage.setItem('currency', currency)
+  }, [currency])
+
+  useEffect(() => {
     localStorage.setItem('history', JSON.stringify(history))
   }, [history])
 
@@ -42,6 +47,7 @@ export function AppProvider({ children }) {
     minimaxKey, setMinimaxKey,
     geminiKey, setGeminiKey,
     savePath, setSavePath,
+    currency, setCurrency,
     dirHandle,
     history, setHistory,
     activeTab, setActiveTab,

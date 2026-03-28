@@ -20,6 +20,7 @@ export default function BatchGenerate() {
   const {
     minimaxKey, geminiKey, savePath, dirHandle,
     history, setHistory,
+    currency,
     t
   } = useApp()
 
@@ -471,7 +472,7 @@ export default function BatchGenerate() {
   return (
     <div className="bg-white rounded-xl shadow-sm p-6">
       {/* 常驻统计面板 */}
-      <UsageStats stats={usageStats} />
+      <UsageStats stats={usageStats} currency={currency} />
 
       {/* 输入阶段 */}
       {step === 'input' && (

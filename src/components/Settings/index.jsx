@@ -8,6 +8,7 @@ export default function Settings() {
     minimaxKey, setMinimaxKey,
     geminiKey, setGeminiKey,
     savePath, setSavePath,
+    currency, setCurrency,
     t
   } = useApp()
 
@@ -116,6 +117,36 @@ export default function Settings() {
             }`}
           >
             English
+          </button>
+        </div>
+      </section>
+
+      <section className="mb-8">
+        <h3 className="text-lg font-medium mb-4">费用货币</h3>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setCurrency('CNY')}
+            className={`px-4 py-2 rounded-lg transition-colors ${
+              currency === 'CNY' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            人民币 (¥)
+          </button>
+          <button
+            onClick={() => setCurrency('SGD')}
+            className={`px-4 py-2 rounded-lg transition-colors ${
+              currency === 'SGD' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            新币 (S$)
+          </button>
+          <button
+            onClick={() => setCurrency('USD')}
+            className={`px-4 py-2 rounded-lg transition-colors ${
+              currency === 'USD' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            美元 ($)
           </button>
         </div>
       </section>
