@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useApp } from '../../context/AppContext'
 import ModeSelector from './ModeSelector'
 import KeywordMode from './KeywordMode'
@@ -7,10 +7,13 @@ import DirectPromptMode from './DirectPromptMode'
 import ImagePreview from '../ImagePreview'
 import ProgressBar from '../ProgressBar'
 import UsageStats from '../UsageStats'
+import GenerationLog from '../GenerationLog'
 import { translateWithMinimax } from '../../services/minimax'
 import { generateImageWithGemini } from '../../services/gemini'
 import { saveImageToFolder, addToHistory } from '../../services/storage'
 import { generateId, sleep } from '../../utils/helpers'
+
+const DRAFT_KEY = 'gemini_batch_draft'
 
 export default function BatchGenerate() {
   const {
@@ -19,19 +22,25 @@ export default function BatchGenerate() {
     t
   } = useApp()
 
-  const [mode, setMode] = useState('keyword')
-  const [keywordInput, setKeywordInput] = useState('')
-  const [referenceImage, setReferenceImage] = useState(null)
-  const [referenceDesc, setReferenceDesc] = useState('')
-  const [directInput, setDirectInput] = useState('')
-  const [imageCount, setImageCount] = useState(1)
-  
-  // 步骤状态: 'input' | 'translating' | 'review' | 'generating' | 'done'
-  const [step, setStep] = useState('input')
-  const [translatedPrompts, setTranslatedPrompts] = useState([])
+  // 从 LocalStorage 恢复草稿
+  const [draft, setDraft] = useState(() => {
+    const saved = localStorage.getItem(DRAFT_KEY)
+    return saved ? JSON.parse(saved) : {
+      mode: 'keyword',
+      keywordInput: '',
+      referenceImage: null,
+      referenceDesc: '',
+      directInput: '',
+      imageCount: 1,
+      translatedPrompts: [],
+      step: 'input'
+    }
+  })
+
   const [results, setResults] = useState([])
   const [progress, setProgress] = useState({ current: 0, total: 0, status: 'idle' })
   const [isRunning, setIsRunning] = useState(false)
+  const [logs, setLogs] = useState([])
 
   // LLM 使用统计
   const [usageStats, setUsageStats] = useState({
@@ -39,6 +48,18 @@ export default function BatchGenerate() {
     minimaxTokens: 0,
     geminiCalls: 0
   })
+
+  // 解构草稿
+  const { mode, setMode, keywordInput, setKeywordInput, referenceImage, setReferenceImage, referenceDesc, setReferenceDesc, directInput, setDirectInput, imageCount, setImageCount, translatedPrompts, setTranslatedPrompts, step, setStep } = draft
+
+  // 保存草稿到 LocalStorage
+  useEffect(() => {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(draft))
+  }, [draft])
+
+  const addLog = (message, type = 'info') => {
+    setLogs(prev => [...prev, { time: new Date(), message, type }])
+  }
 
   const getInput = () => {
     if (mode === 'keyword') return keywordInput
@@ -75,6 +96,8 @@ export default function BatchGenerate() {
     setTranslatedPrompts([])
     setProgress({ current: 0, total: prompts.length, status: 'translating' })
     setUsageStats({ minimaxCalls: 0, minimaxTokens: 0, geminiCalls: 0 })
+    setLogs([])
+    addLog(`开始翻译 ${prompts.length} 条 Prompt...`, 'info')
 
     const translated = []
     let totalTokens = 0
@@ -82,9 +105,11 @@ export default function BatchGenerate() {
 
     for (let i = 0; i < prompts.length; i++) {
       const promptInput = prompts[i]
+      addLog(`翻译中: ${promptInput.slice(0, 30)}${promptInput.length > 30 ? '...' : ''}`, 'translating')
       
       if (mode === 'direct') {
         translated.push({ original: promptInput, translated: promptInput, editing: promptInput })
+        addLog(`跳过翻译（直接粘贴模式）`, 'info')
         setProgress(p => ({ ...p, current: i + 1 }))
         continue
       }
@@ -96,12 +121,13 @@ export default function BatchGenerate() {
           promptInput,
           mode === 'reference' ? referenceImage : null
         )
-        // result 现在是 { text, usage }
         translated.push({ original: promptInput, translated: result.text, editing: result.text })
         totalTokens += result.usage.totalTokens
         callCount++
+        addLog(`翻译完成`, 'success')
       } catch (e) {
         console.error('Translation failed:', e)
+        addLog(`翻译失败: ${e.message}`, 'error')
         translated.push({ original: promptInput, translated: `翻译失败: ${e.message}`, editing: `翻译失败: ${e.message}` })
       }
       
@@ -115,6 +141,7 @@ export default function BatchGenerate() {
     }))
     setTranslatedPrompts(translated)
     setStep('review')
+    addLog(`翻译完成，共 ${callCount} 条成功`, 'success')
   }
 
   // 步骤2: 编辑翻译结果后开始生成
@@ -127,6 +154,8 @@ export default function BatchGenerate() {
     setStep('generating')
     setResults([])
     setProgress({ current: 0, total: translatedPrompts.length * imageCount, status: 'generating' })
+    setLogs([])
+    addLog(`开始生成 ${translatedPrompts.length * imageCount} 张图片...`, 'info')
 
     const taskId = generateId()
     const allResults = []
@@ -138,7 +167,9 @@ export default function BatchGenerate() {
       const promptToUse = item.editing || item.translated
 
       for (let j = 0; j < imageCount; j++) {
-        setProgress(p => ({ ...p, current: allResults.length + 1 }))
+        const imageIndex = i * imageCount + j + 1
+        setProgress(p => ({ ...p, current: imageIndex }))
+        addLog(`[${imageIndex}/${translatedPrompts.length * imageCount}] 生成中...`, 'generating')
 
         let imageData = null
         let retryCount = 0
@@ -152,6 +183,7 @@ export default function BatchGenerate() {
           } catch (e) {
             retryCount++
             if (retryCount > maxRetries) {
+              addLog(`生成失败: ${e.message}`, 'error')
               allResults.push({
                 id: `${taskId}_${i}_${j}`,
                 status: 'failed',
@@ -161,13 +193,15 @@ export default function BatchGenerate() {
               })
               break
             }
+            addLog(`正在重试 (${retryCount}/${maxRetries})...`, 'translating')
             await sleep(3000 * retryCount)
           }
         }
 
         if (imageData) {
           setProgress(p => ({ ...p, status: 'saving' }))
-          const filename = `gemini_${timestamp}_${String(i * imageCount + j + 1).padStart(3, '0')}.png`
+          const filename = `gemini_${timestamp}_${String(imageIndex).padStart(3, '0')}.png`
+          addLog(`保存图片: ${filename}`, 'translating')
 
           try {
             if (dirHandle) {
@@ -182,8 +216,10 @@ export default function BatchGenerate() {
               prompt: item.original,
               translatedPrompt: promptToUse
             })
+            addLog(`✓ 已保存: ${filename}`, 'success')
           } catch (e) {
             console.error('Save failed:', e)
+            addLog(`保存失败: ${e.message}`, 'error')
             allResults.push({
               id: `${taskId}_${i}_${j}`,
               status: 'failed',
@@ -197,11 +233,10 @@ export default function BatchGenerate() {
           }
         }
 
-        setProgress(p => ({ ...p, current: allResults.length, status: 'generating' }))
+        setProgress(p => ({ ...p, current: imageIndex, status: 'generating' }))
       }
     }
 
-    // 更新 Gemini 调用统计
     setUsageStats(prev => ({
       ...prev,
       geminiCalls: geminiCallCount
@@ -213,15 +248,14 @@ export default function BatchGenerate() {
 
     const successCount = allResults.filter(r => r.status === 'success').length
     const failedCount = allResults.filter(r => r.status === 'failed').length
+    addLog(`任务完成! 成功 ${successCount} 张${failedCount > 0 ? `, 失败 ${failedCount} 张` : ''}`, 'success')
 
-    // 获取最终的 usageStats
     const finalStats = {
       minimaxCalls: usageStats.minimaxCalls,
       minimaxTokens: usageStats.minimaxTokens,
       geminiCalls: geminiCallCount
     }
 
-    // 历史记录不保存 base64 数据，只保存元信息
     const historyResults = allResults.map(r => ({
       id: r.id,
       status: r.status,
@@ -250,6 +284,7 @@ export default function BatchGenerate() {
     const newResults = [...results]
     newResults[index] = { ...resultItem, status: 'pending' }
     setResults(newResults)
+    addLog(`重试生成中...`, 'translating')
 
     try {
       const imageData = await generateImageWithGemini(geminiKey, resultItem.translatedPrompt)
@@ -266,8 +301,8 @@ export default function BatchGenerate() {
         mimeType: imageData.mimeType,
         filename
       }
+      addLog(`✓ 重试成功: ${filename}`, 'success')
       
-      // 更新统计
       setUsageStats(prev => ({
         ...prev,
         geminiCalls: prev.geminiCalls + 1
@@ -278,6 +313,7 @@ export default function BatchGenerate() {
         status: 'failed',
         error: e.message
       }
+      addLog(`重试失败: ${e.message}`, 'error')
     }
 
     setResults([...newResults])
@@ -288,6 +324,7 @@ export default function BatchGenerate() {
     setTranslatedPrompts([])
     setResults([])
     setProgress({ current: 0, total: 0, status: 'idle' })
+    setLogs([])
   }
 
   const updatePromptEditing = (index, newValue) => {
@@ -296,21 +333,25 @@ export default function BatchGenerate() {
     setTranslatedPrompts(updated)
   }
 
+  const updateDraft = (updates) => {
+    setDraft(prev => ({ ...prev, ...updates }))
+  }
+
   const renderModeInput = () => {
     switch (mode) {
       case 'keyword':
-        return <KeywordMode input={keywordInput} setInput={setKeywordInput} />
+        return <KeywordMode input={keywordInput} setInput={(v) => updateDraft({ keywordInput: v })} />
       case 'reference':
         return (
           <ReferenceMode
             imageBase64={referenceImage}
-            setImageBase64={setReferenceImage}
+            setImageBase64={(v) => updateDraft({ referenceImage: v })}
             description={referenceDesc}
-            setDescription={setReferenceDesc}
+            setDescription={(v) => updateDraft({ referenceDesc: v })}
           />
         )
       case 'direct':
-        return <DirectPromptMode input={directInput} setInput={setDirectInput} />
+        return <DirectPromptMode input={directInput} setInput={(v) => updateDraft({ directInput: v })} />
       default:
         return null
     }
@@ -386,7 +427,7 @@ export default function BatchGenerate() {
       {/* 输入阶段 */}
       {step === 'input' && (
         <>
-          <ModeSelector mode={mode} setMode={setMode} />
+          <ModeSelector mode={mode} setMode={(m) => updateDraft({ mode: m })} />
 
           <div className="mb-4">
             {renderModeInput()}
@@ -439,7 +480,7 @@ export default function BatchGenerate() {
       {/* 翻译预览/编辑 */}
       {step === 'review' && renderReviewStep()}
 
-      {/* 生成中/完成 */}
+      {/* 生成中/完成 - 左右分栏 */}
       {(step === 'generating' || step === 'done') && (
         <>
           <div className="flex justify-between items-center mb-4">
@@ -452,20 +493,32 @@ export default function BatchGenerate() {
             </button>
           </div>
 
-          {progress.status !== 'idle' && (
-            <ProgressBar
-              current={progress.current}
-              total={progress.total}
-              status={progress.status}
-            />
-          )}
+          {/* 左右分栏布局 */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+            {/* 左侧：日志 */}
+            <div className="lg:col-span-1">
+              <GenerationLog logs={logs} />
+            </div>
+            
+            {/* 右侧：进度 + 图片网格 */}
+            <div className="lg:col-span-2">
+              {progress.status !== 'idle' && (
+                <div className="mb-4">
+                  <ProgressBar
+                    current={progress.current}
+                    total={progress.total}
+                    status={progress.status}
+                  />
+                </div>
+              )}
 
-          {results.length > 0 && (
-            <div className="mt-4">
-              <div className="text-sm text-gray-500 mb-4">
-                {results.filter(r => r.status === 'success').length} {t('history.successCount')}, {results.filter(r => r.status === 'failed').length} {t('history.failedCount')}
-              </div>
-              <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              {results.length > 0 && (
+                <div className="text-sm text-gray-500 mb-4">
+                  {results.filter(r => r.status === 'success').length} {t('history.successCount')}, {results.filter(r => r.status === 'failed').length} {t('history.failedCount')}
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {results.map((item, index) => (
                   <ImagePreview
                     key={item.id}
@@ -475,7 +528,7 @@ export default function BatchGenerate() {
                 ))}
               </div>
             </div>
-          )}
+          </div>
         </>
       )}
     </div>
