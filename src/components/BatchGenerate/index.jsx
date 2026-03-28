@@ -114,10 +114,6 @@ export default function BatchGenerate() {
       alert(t('errors.noMinimaxKey'))
       return
     }
-    if (!dirHandle) {
-      alert(t('errors.noSavePath'))
-      return
-    }
 
     const prompts = parsePrompts()
     if (prompts.length === 0) return
