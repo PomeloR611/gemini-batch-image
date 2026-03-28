@@ -62,8 +62,13 @@ export default function BatchGenerate() {
     directInput, setDirectInput, 
     imageCount, setImageCount, 
     translatedPrompts, setTranslatedPrompts, 
-    step, setStep 
+    step
   } = draft
+
+  // 创建 step 的 setter
+  const setStep = (newStep) => {
+    updateDraft({ step: typeof newStep === 'function' ? newStep(draft.step) : newStep })
+  }
 
   // 页面加载时从 IndexedDB 恢复参考图
   useEffect(() => {
@@ -110,13 +115,19 @@ export default function BatchGenerate() {
 
   // 步骤1: 点击翻译
   const handleTranslate = async () => {
+    console.log('handleTranslate called, minimaxKey:', minimaxKey ? 'set' : 'empty')
+    
     if (!minimaxKey) {
       alert(t('errors.noMinimaxKey'))
       return
     }
 
     const prompts = parsePrompts()
-    if (prompts.length === 0) return
+    console.log('prompts:', prompts)
+    if (prompts.length === 0) {
+      alert('请输入内容')
+      return
+    }
 
     setStep('translating')
     setTranslatedPrompts([])
