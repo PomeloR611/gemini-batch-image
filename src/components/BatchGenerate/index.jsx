@@ -24,9 +24,29 @@ export default function BatchGenerate() {
   } = useApp()
 
   // 从 LocalStorage 恢复草稿
-  const [draft, setDraft] = useState(() => {
-    const saved = localStorage.getItem(DRAFT_KEY)
-    return saved ? JSON.parse(saved) : {
+  const getInitialDraft = () => {
+    try {
+      const saved = localStorage.getItem(DRAFT_KEY)
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        // 确保必要字段存在
+        return {
+          mode: parsed.mode || 'keyword',
+          keywordInput: parsed.keywordInput || '',
+          referenceImage: parsed.referenceImage || null,
+          referenceImageId: parsed.referenceImageId || null,
+          referenceDesc: parsed.referenceDesc || '',
+          directInput: parsed.directInput || '',
+          imageCount: parsed.imageCount || 1,
+          translatedPrompts: Array.isArray(parsed.translatedPrompts) ? parsed.translatedPrompts : [],
+          step: parsed.step || 'input'
+        }
+      }
+    } catch (e) {
+      console.error('Failed to parse draft from localStorage:', e)
+      localStorage.removeItem(DRAFT_KEY)
+    }
+    return {
       mode: 'keyword',
       keywordInput: '',
       referenceImage: null,
@@ -37,7 +57,9 @@ export default function BatchGenerate() {
       translatedPrompts: [],
       step: 'input'
     }
-  })
+  }
+
+  const [draft, setDraft] = useState(getInitialDraft)
 
   const [results, setResults] = useState([])
   const [progress, setProgress] = useState({ current: 0, total: 0, status: 'idle' })
