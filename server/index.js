@@ -25,7 +25,7 @@ app.use(session({
 }))
 
 // API routes (mounted in later tasks)
-// app.use('/api/auth', require('./routes/auth'))
+app.use('/api/auth', require('./routes/auth'))
 // app.use('/api/proxy', require('./routes/proxy'))
 // app.use('/api/admin', require('./routes/admin'))
 
