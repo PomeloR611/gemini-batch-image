@@ -5,32 +5,13 @@ import StorageInfo from '../StorageInfo'
 export default function Settings() {
   const {
     lang, setLang,
-    minimaxKey, setMinimaxKey,
-    geminiKey, setGeminiKey,
-    savePath, setSavePath,
     currency, setCurrency,
     t
   } = useApp()
 
   const [saved, setSaved] = useState(false)
 
-  const handleSelectFolder = async () => {
-    try {
-      const handle = await window.showDirectoryPicker()
-      setSavePath(handle.name)
-      // 注意：handle 不能被序列化存储，每次页面刷新后需要重新选择
-      // 可以将 handle 存在内存中，但刷新后会丢失
-      window.__currentDirHandle = handle
-      setSaved(true)
-      setTimeout(() => setSaved(false), 2000)
-    } catch (e) {
-      if (e.name !== 'AbortError') {
-        console.error('Failed to select folder:', e)
-      }
-    }
-  }
-
-  const handleSaveKeys = () => {
+  const showSaved = () => {
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
@@ -40,70 +21,10 @@ export default function Settings() {
       <h2 className="text-xl font-semibold mb-6">{t('settings.title')}</h2>
 
       <section className="mb-8">
-        <h3 className="text-lg font-medium mb-4">{t('settings.apiKeys')}</h3>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              {t('settings.minimaxKey')}
-            </label>
-            <input
-              type="password"
-              value={minimaxKey}
-              onChange={(e) => setMinimaxKey(e.target.value)}
-              onBlur={handleSaveKeys}
-              placeholder="sk-xxxxxxxxxxxxxxxx"
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              {t('settings.geminiKey')}
-            </label>
-            <input
-              type="password"
-              value={geminiKey}
-              onChange={(e) => setGeminiKey(e.target.value)}
-              onBlur={handleSaveKeys}
-              placeholder="AIza..."
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-        </div>
-      </section>
-
-      <section className="mb-8">
-        <h3 className="text-lg font-medium mb-4">{t('settings.savePath')}</h3>
-        <div className="flex items-center gap-4">
-          {savePath ? (
-            <>
-              <span className="text-gray-600">{savePath}</span>
-              <button
-                onClick={handleSelectFolder}
-                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-              >
-                {t('settings.changeFolder')}
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={handleSelectFolder}
-              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-            >
-              {t('settings.selectFolder')}
-            </button>
-          )}
-        </div>
-        <p className="text-xs text-gray-400 mt-2">
-          Chrome/Edge 支持 File System Access API，可直接写入指定文件夹。
-          注意：刷新页面后需要重新选择文件夹。
-        </p>
-      </section>
-
-      <section className="mb-8">
         <h3 className="text-lg font-medium mb-4">{t('settings.language')}</h3>
         <div className="flex gap-2">
           <button
-            onClick={() => setLang('zh')}
+            onClick={() => { setLang('zh'); showSaved() }}
             className={`px-4 py-2 rounded-lg transition-colors ${
               lang === 'zh' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
@@ -111,7 +32,7 @@ export default function Settings() {
             中文
           </button>
           <button
-            onClick={() => setLang('en')}
+            onClick={() => { setLang('en'); showSaved() }}
             className={`px-4 py-2 rounded-lg transition-colors ${
               lang === 'en' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
@@ -124,30 +45,21 @@ export default function Settings() {
       <section className="mb-8">
         <h3 className="text-lg font-medium mb-4">费用货币</h3>
         <div className="flex gap-2">
-          <button
-            onClick={() => setCurrency('CNY')}
-            className={`px-4 py-2 rounded-lg transition-colors ${
-              currency === 'CNY' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            人民币 (¥)
-          </button>
-          <button
-            onClick={() => setCurrency('SGD')}
-            className={`px-4 py-2 rounded-lg transition-colors ${
-              currency === 'SGD' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            新币 (S$)
-          </button>
-          <button
-            onClick={() => setCurrency('USD')}
-            className={`px-4 py-2 rounded-lg transition-colors ${
-              currency === 'USD' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            美元 ($)
-          </button>
+          {[
+            { id: 'CNY', label: '人民币 (¥)' },
+            { id: 'SGD', label: '新币 (S$)' },
+            { id: 'USD', label: '美元 ($)' },
+          ].map(c => (
+            <button
+              key={c.id}
+              onClick={() => { setCurrency(c.id); showSaved() }}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                currency === c.id ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              {c.label}
+            </button>
+          ))}
         </div>
       </section>
 

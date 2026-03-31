@@ -18,7 +18,6 @@ const DRAFT_KEY = 'gemini_batch_draft'
 
 export default function BatchGenerate() {
   const {
-    minimaxKey, geminiKey, savePath, dirHandle,
     history, setHistory,
     currency,
     t
@@ -140,11 +139,6 @@ export default function BatchGenerate() {
 
   // 步骤1: 点击翻译
   const handleTranslate = async () => {
-    if (!minimaxKey) {
-      alert(t('errors.noMinimaxKey'))
-      return
-    }
-
     const prompts = parsePrompts()
     if (prompts.length === 0) {
       alert('请输入内容')
@@ -174,7 +168,6 @@ export default function BatchGenerate() {
 
       try {
         const result = await translateWithMinimax(
-          minimaxKey,
           mode,
           promptInput,
           mode === 'reference' ? referenceImage : null
@@ -203,11 +196,6 @@ export default function BatchGenerate() {
 
   // 步骤2: 编辑翻译结果后开始生成
   const handleGenerate = async () => {
-    if (!geminiKey) {
-      alert(t('errors.noGeminiKey'))
-      return
-    }
-
     updateDraft({ step: 'generating' })
     setResults([])
     setProgress({ current: 0, total: translatedPrompts.length * imageCount, status: 'generating' })
@@ -234,7 +222,7 @@ export default function BatchGenerate() {
 
         while (retryCount <= maxRetries) {
           try {
-            imageData = await generateImageWithGemini(geminiKey, promptToUse)
+            imageData = await generateImageWithGemini(promptToUse)
             geminiCallCount++
             break
           } catch (e) {
@@ -261,7 +249,7 @@ export default function BatchGenerate() {
           addLog(`保存图片: ${filename}`, 'translating')
 
           try {
-            await saveImageToFolder(dirHandle, filename, imageData.base64, imageData.mimeType)
+            await saveImageToFolder(filename, imageData.base64, imageData.mimeType)
             allResults.push({
               id: `${taskId}_${i}_${j}`,
               status: 'success',
@@ -334,18 +322,16 @@ export default function BatchGenerate() {
   }
 
   const handleRetry = async (resultItem, index) => {
-    if (!geminiKey || !dirHandle) return
-
     const newResults = [...results]
     newResults[index] = { ...resultItem, status: 'pending' }
     setResults(newResults)
     addLog(`重试生成中...`, 'translating')
 
     try {
-      const imageData = await generateImageWithGemini(geminiKey, resultItem.translatedPrompt)
+      const imageData = await generateImageWithGemini(resultItem.translatedPrompt)
       const filename = `gemini_${Date.now()}_${String(index + 1).padStart(3, '0')}.png`
 
-      await saveImageToFolder(dirHandle, filename, imageData.base64, imageData.mimeType)
+      await saveImageToFolder(filename, imageData.base64, imageData.mimeType)
 
       newResults[index] = {
         ...resultItem,

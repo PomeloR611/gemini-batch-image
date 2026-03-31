@@ -1,5 +1,3 @@
-const API_URL = 'https://api.minimax.chat/v1/text/chatcompletion_v2'
-
 const TRANSLATION_PROMPTS = {
   keyword: `你是一个专业的AI生图Prompt翻译官。请把用户给出的主题词扩展成详细的英文AI生图Prompt。
 
@@ -23,7 +21,7 @@ const TRANSLATION_PROMPTS = {
 参考图描述：{description}`
 }
 
-export async function translateWithMinimax(key, mode, input, imageBase64 = null) {
+export async function translateWithMinimax(mode, input, imageBase64 = null) {
   const promptTemplate = TRANSLATION_PROMPTS[mode]
   const promptText = promptTemplate.replace('{input}', input).replace('{description}', input)
 
@@ -50,32 +48,26 @@ export async function translateWithMinimax(key, mode, input, imageBase64 = null)
     body.messages = messages
   }
 
-  const response = await fetch(API_URL, {
+  const response = await fetch('/api/proxy/minimax', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${key}`
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
   })
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}))
-    throw new Error(errorData.error?.message || `HTTP ${response.status}`)
+    throw new Error(errorData.error?.message || errorData.error || `HTTP ${response.status}`)
   }
 
   const data = await response.json()
-  console.log('MiniMax 返回数据:', JSON.stringify(data, null, 2))
-  
-  // MiniMax 可能返回的结构: choices[0].message.content 或 choices[0].text
-  const text = data.choices?.[0]?.message?.content?.trim() 
+
+  const text = data.choices?.[0]?.message?.content?.trim()
             || data.choices?.[0]?.text?.trim()
             || data.choices?.[0]?.message?.trim()
             || ''
-  
-  // 提取 token 用量
+
   const usage = data.usage || {}
-  
+
   return {
     text,
     usage: {

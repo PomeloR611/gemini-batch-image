@@ -9,8 +9,8 @@
     }
   },
   "auth": {
-    "loginHint": "Enter your access code to continue",
-    "codePlaceholder": "Access code",
+    "loginHint": "Enter your login code",
+    "codePlaceholder": "Enter login code",
     "loginButton": "Login",
     "loggingIn": "Logging in...",
     "logout": "Logout"
@@ -58,9 +58,35 @@
     "language": "Interface Language",
     "saved": "Settings saved"
   },
+  "admin": {
+    "apiConfig": "Model API Configuration",
+    "current": "Current",
+    "enterNewKey": "Enter new key (leave empty to keep current)",
+    "saveConfig": "Save Configuration",
+    "codeManagement": "Login Code Management",
+    "label": "Label",
+    "labelPlaceholder": "e.g. Designer Wang",
+    "count": "Count",
+    "isAdmin": "Admin privileges",
+    "generate": "Generate Codes",
+    "code": "Code",
+    "role": "Role",
+    "status": "Status",
+    "lastLogin": "Last Login",
+    "actions": "Actions",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "enable": "Enable",
+    "disable": "Disable",
+    "unbind": "Unbind",
+    "delete": "Delete",
+    "confirmDelete": "Are you sure you want to delete this code?",
+    "created": "Created",
+    "codes": "code(s)"
+  },
   "errors": {
-    "noMinimaxKey": "Please enter MiniMax Key in Settings",
-    "noGeminiKey": "Please enter Gemini Key in Settings",
+    "noMinimaxKey": "MiniMax Key not configured. Contact admin.",
+    "noGeminiKey": "Gemini Key not configured. Contact admin.",
     "noSavePath": "Please select a save path in Settings",
     "invalidKey": "Invalid API Key",
     "networkError": "Network error, please check your connection",

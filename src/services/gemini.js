@@ -1,13 +1,7 @@
-const API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image-preview:generateContent'
-
-export async function generateImageWithGemini(key, prompt) {
-  const url = `${API_URL}?key=${key}`
-
-  const response = await fetch(url, {
+export async function generateImageWithGemini(prompt) {
+  const response = await fetch('/api/proxy/gemini', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       contents: [{
         parts: [{ text: prompt }]
@@ -17,12 +11,11 @@ export async function generateImageWithGemini(key, prompt) {
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}))
-    throw new Error(errorData.error?.message || `HTTP ${response.status}`)
+    throw new Error(errorData.error?.message || errorData.error || `HTTP ${response.status}`)
   }
 
   const data = await response.json()
-  
-  // 解析返回的图片
+
   const parts = data.candidates?.[0]?.content?.parts || []
   for (const part of parts) {
     if (part.inlineData) {
@@ -32,6 +25,6 @@ export async function generateImageWithGemini(key, prompt) {
       }
     }
   }
-  
+
   throw new Error('No image in response')
 }
