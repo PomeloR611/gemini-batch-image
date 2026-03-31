@@ -1,0 +1,16 @@
+{
+  "name": "gemini-batch-server",
+  "version": "1.0.0",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "better-sqlite3": "^11.7.0",
+    "express-session": "^1.18.1",
+    "better-sqlite3-session-store": "^0.1.0",
+    "cors": "^2.8.5"
+  }
+}
