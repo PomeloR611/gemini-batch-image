@@ -4,8 +4,16 @@
     "tabs": {
       "generate": "Batch Generate",
       "history": "History",
-      "settings": "Settings"
+      "settings": "Settings",
+      "admin": "Admin"
     }
+  },
+  "auth": {
+    "loginHint": "Enter your access code to continue",
+    "codePlaceholder": "Access code",
+    "loginButton": "Login",
+    "loggingIn": "Logging in...",
+    "logout": "Logout"
   },
   "generate": {
     "modes": {

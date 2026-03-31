@@ -4,8 +4,16 @@
     "tabs": {
       "generate": "批量生图",
       "history": "历史记录",
-      "settings": "设置"
+      "settings": "设置",
+      "admin": "管理后台"
     }
+  },
+  "auth": {
+    "loginHint": "请输入访问码以继续",
+    "codePlaceholder": "访问码",
+    "loginButton": "登录",
+    "loggingIn": "登录中...",
+    "logout": "退出"
   },
   "generate": {
     "modes": {

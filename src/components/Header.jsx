@@ -1,7 +1,8 @@
 import { useApp } from '../context/AppContext'
+import { logout } from '../services/auth'
 
 export default function Header() {
-  const { activeTab, setActiveTab, t } = useApp()
+  const { activeTab, setActiveTab, user, setUser, t } = useApp()
 
   const tabs = [
     { id: 'generate', label: t('app.tabs.generate') },
@@ -9,12 +10,38 @@ export default function Header() {
     { id: 'settings', label: t('app.tabs.settings') },
   ]
 
+  if (user?.is_admin) {
+    tabs.push({ id: 'admin', label: t('app.tabs.admin') })
+  }
+
+  const handleLogout = async () => {
+    try {
+      await logout()
+      setUser(null)
+    } catch (e) {
+      console.error('Logout failed:', e)
+    }
+  }
+
   return (
     <header className="bg-white shadow-sm border-b">
       <div className="max-w-6xl mx-auto px-6 py-4">
-        <h1 className="text-2xl font-bold text-gray-800 mb-4">
-          {t('app.title')}
-        </h1>
+        <div className="flex justify-between items-center mb-4">
+          <h1 className="text-2xl font-bold text-gray-800">
+            {t('app.title')}
+          </h1>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-gray-500">
+              {user?.label || user?.code}
+            </span>
+            <button
+              onClick={handleLogout}
+              className="px-3 py-1 text-sm text-gray-500 hover:text-red-500 transition-colors"
+            >
+              {t('auth.logout')}
+            </button>
+          </div>
+        </div>
         <nav className="flex gap-1">
           {tabs.map((tab) => (
             <button

@@ -1,13 +1,11 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import { t } from '../i18n'
+import { t as translate } from '../i18n'
+import { getMe } from '../services/auth'
 
 const AppContext = createContext()
 
 export function AppProvider({ children }) {
   const [lang, setLang] = useState(() => localStorage.getItem('lang') || 'zh')
-  const [minimaxKey, setMinimaxKey] = useState(() => localStorage.getItem('minimaxKey') || '')
-  const [geminiKey, setGeminiKey] = useState(() => localStorage.getItem('geminiKey') || '')
-  const [savePath, setSavePath] = useState(() => localStorage.getItem('savePath') || null)
   const [currency, setCurrency] = useState(() => localStorage.getItem('currency') || 'CNY')
   const [history, setHistory] = useState(() => {
     const saved = localStorage.getItem('history')
@@ -15,21 +13,21 @@ export function AppProvider({ children }) {
   })
   const [activeTab, setActiveTab] = useState('generate')
 
+  // Auth state
+  const [user, setUser] = useState(null)
+  const [authLoading, setAuthLoading] = useState(true)
+
+  // Check session on mount
+  useEffect(() => {
+    getMe()
+      .then((u) => setUser(u))
+      .catch(() => setUser(null))
+      .finally(() => setAuthLoading(false))
+  }, [])
+
   useEffect(() => {
     localStorage.setItem('lang', lang)
   }, [lang])
-
-  useEffect(() => {
-    localStorage.setItem('minimaxKey', minimaxKey)
-  }, [minimaxKey])
-
-  useEffect(() => {
-    localStorage.setItem('geminiKey', geminiKey)
-  }, [geminiKey])
-
-  useEffect(() => {
-    localStorage.setItem('savePath', savePath || '')
-  }, [savePath])
 
   useEffect(() => {
     localStorage.setItem('currency', currency)
@@ -39,19 +37,14 @@ export function AppProvider({ children }) {
     localStorage.setItem('history', JSON.stringify(history))
   }, [history])
 
-  // dirHandle 存在 window 上，每次页面刷新后需要重新选择
-  const dirHandle = window.__currentDirHandle || null
-
   const value = {
     lang, setLang,
-    minimaxKey, setMinimaxKey,
-    geminiKey, setGeminiKey,
-    savePath, setSavePath,
     currency, setCurrency,
-    dirHandle,
     history, setHistory,
     activeTab, setActiveTab,
-    t: (key) => t(key, lang)
+    user, setUser,
+    authLoading,
+    t: (key) => translate(key, lang)
   }
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>
