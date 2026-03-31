@@ -12,6 +12,12 @@ export default defineConfig({
     // 禁用 HTTP 缓存
     headers: {
       'Cache-Control': 'no-cache, no-store, must-revalidate'
+    },
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true
+      }
     }
   },
   build: {

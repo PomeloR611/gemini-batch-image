@@ -4,7 +4,7 @@ const session = require('express-session')
 const { getDb } = require('./services/db')
 
 const app = express()
-const PORT = process.env.PORT || 3000
+const PORT = process.env.PORT || 3001
 
 // Init DB
 getDb()
@@ -24,10 +24,10 @@ app.use(session({
   }
 }))
 
-// API routes (mounted in later tasks)
+// API routes
 app.use('/api/auth', require('./routes/auth'))
-// app.use('/api/proxy', require('./routes/proxy'))
-// app.use('/api/admin', require('./routes/admin'))
+app.use('/api/proxy', require('./routes/proxy'))
+app.use('/api/admin', require('./routes/admin'))
 
 // Serve frontend static files
 const distPath = path.join(__dirname, '..', 'dist')
